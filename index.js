@@ -29,7 +29,7 @@ app.message(async ({ message, client }) => {
 
     // === 勤怠連絡チャンネルのチェック ===
     if (channelName === '勤怠連絡') {
-      if (!message.text || message.subtype === 'bot_message') return;
+      if (!message.text || message.subtype) return;
 
       const lines = message.text.trim().split(/\n|\r/);
       let allValid = true;
