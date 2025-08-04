@@ -8,8 +8,16 @@ const app = new App({
   signingSecret: process.env.SLACK_SIGNING_SECRET
 });
 
-// 勝手にSlackで発行されたカスタムスタンプ名のマップ
-const weekdayToEmoji = ['月', '火', '水', '木', '金', '土', '日'];
+// Slackのカスタムスタンプ名（曜日）
+const weekdayToEmoji = [
+  'getsu',    // 日曜 = 0 → 月曜に見せたいならここで調整
+  'ka',
+  'sui',
+  'moku',
+  'kin',
+  'do',
+  'niti'
+];
 
 // メッセージ受信イベント
 app.message(async ({ message, client }) => {
@@ -24,17 +32,17 @@ app.message(async ({ message, client }) => {
         name: 'eyes',
         timestamp: message.ts
       });
-      return; // 他の処理はスキップ
+      return;
     }
 
     // === 勤怠連絡チャンネルのチェック ===
     if (channelName === '勤怠連絡') {
-      if (!message.text || message.subtype) return;
+      if (!message.text || message.subtype === 'bot_message') return;
 
       const lines = message.text.trim().split(/\n|\r/);
       let allValid = true;
 
-      const formatRegex = /^(\d{1,2})\/(\d{1,2})\s+\S+\s+\S+(\s+\S+)*(\s+(\u8a08\u753b\u4f11))?$/;
+      const formatRegex = /^(\d{1,2})\/(\d{1,2})\s+\S+\s+\S+(\s+\S+)*(\s+計画休)?$/;
 
       for (const line of lines) {
         const match = line.trim().match(formatRegex);
