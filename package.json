@@ -10,7 +10,8 @@
   "license": "ISC",
   "dependencies": {
     "@slack/bolt": "^4.4.0",
-    "dotenv": "^17.2.1"
+    "dotenv": "^17.2.1",
+    "dayjs": "^1.11.10"       // 👈 これを追加
   },
   "devDependencies": {},
   "description": ""
