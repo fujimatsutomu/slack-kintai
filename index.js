@@ -8,7 +8,7 @@ const app = new App({
   signingSecret: process.env.SLACK_SIGNING_SECRET
 });
 
-// 曜日スタンプ名（月=0 に補正済）
+// 曜日スタンプ名（日曜=0 → 月曜=0 に変換）
 const weekdayToEmoji = [
   'getsu', // 月
   'ka',    // 火
@@ -86,9 +86,8 @@ app.message(async ({ message, client }) => {
         });
       }
     }
-
   } catch (error) {
-    console.error('投稿メッセージエラー:', error);
+    console.error(error);
   }
 });
 
@@ -101,12 +100,12 @@ app.event('message', async ({ event, client }) => {
         ts: event.message.ts
       });
     } catch (error) {
-      console.error('編集削除エラー:', error);
+      console.error(error);
     }
   }
 });
 
-// アプリ起動
+// サーバー起動
 (async () => {
   await app.start(process.env.PORT || 3000);
   console.log('⚡️ Bolt app is running!');
