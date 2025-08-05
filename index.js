@@ -102,16 +102,16 @@ app.message(async ({ message, client }) => {
   }
 });
 
-// === 編集されたら警告コメントを送信（削除後の編集には反応しない）===
+// === 編集されたら警告コメントを送信（スレッド投稿・Bot投稿は無視） ===
 app.event('message', async ({ event, client }) => {
   if (event.subtype === 'message_changed') {
     const msg = event.message;
 
-    // 以下の条件を満たす場合はスキップ
     if (
       msg.bot_id ||                               // Bot自身の投稿
       event.previous_message?.bot_id ||           // 以前の投稿がBotのもの
-      !msg.text || msg.text.trim() === ''         // 削除で空になったメッセージ
+      !msg.text || msg.text.trim() === '' ||      // 空メッセージ
+      msg.thread_ts !== undefined                 // スレッド返信は無視
     ) {
       return;
     }
