@@ -91,13 +91,14 @@ app.message(async ({ message, client }) => {
   }
 });
 
-// === 編集されたら削除 ===
+// === 編集されたら警告コメントを送信 ===
 app.event('message', async ({ event, client }) => {
   if (event.subtype === 'message_changed') {
     try {
-      await client.chat.delete({
+      await client.chat.postMessage({
         channel: event.channel,
-        ts: event.message.ts
+        thread_ts: event.message.ts,
+        text: 'この申請は**無効**です。メッセージを**削除して再度申請**してください。'
       });
     } catch (error) {
       console.error(error);
