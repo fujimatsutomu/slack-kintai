@@ -19,6 +19,20 @@ const weekdayToEmoji = [
   'niti'   // 日
 ];
 
+// 指定の月日から「今日に最も近い年」を自動で推定
+function resolveDate(month, day) {
+  const today = dayjs();
+  const candidates = [
+    dayjs(`${today.year() - 1}-${month}-${day}`, 'YYYY-M-D'),
+    dayjs(`${today.year()}-${month}-${day}`, 'YYYY-M-D'),
+    dayjs(`${today.year() + 1}-${month}-${day}`, 'YYYY-M-D'),
+  ];
+
+  return candidates
+    .filter(date => date.isValid())
+    .sort((a, b) => Math.abs(a.diff(today)) - Math.abs(b.diff(today)))[0];
+}
+
 // === メッセージ投稿時の処理 ===
 app.message(async ({ message, client }) => {
   try {
@@ -52,8 +66,8 @@ app.message(async ({ message, client }) => {
         }
 
         const [_, month, day] = match;
-        const date = dayjs(`${dayjs().year()}-${month}-${day}`, 'YYYY-M-D');
 
+        const date = resolveDate(month, day);
         if (!date.isValid()) {
           allValid = false;
           break;
@@ -63,9 +77,20 @@ app.message(async ({ message, client }) => {
         const emojiIndex = (date.day() + 6) % 7;
         const emoji = weekdayToEmoji[emojiIndex];
 
+        // 曜日スタンプ
         await client.reactions.add({
           channel: message.channel,
           name: emoji,
+          timestamp: message.ts
+        });
+
+        // 未来・過去スタンプ
+        const today = dayjs();
+        const directionEmoji = date.isBefore(today, 'day') ? 'rewind' : 'fast_forward';
+
+        await client.reactions.add({
+          channel: message.channel,
+          name: directionEmoji,
           timestamp: message.ts
         });
       }
