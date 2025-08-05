@@ -102,16 +102,17 @@ app.message(async ({ message, client }) => {
   }
 });
 
-// === 編集されたら警告コメントを送信（スレッド投稿・Bot投稿は無視） ===
+// === 編集されたら警告コメントを送信（スレッド返信・Bot投稿は無視） ===
 app.event('message', async ({ event, client }) => {
   if (event.subtype === 'message_changed') {
     const msg = event.message;
 
+    // 無限ループ回避 + 編集済みスレッド返信を無視
     if (
       msg.bot_id ||                               // Bot自身の投稿
       event.previous_message?.bot_id ||           // 以前の投稿がBotのもの
       !msg.text || msg.text.trim() === '' ||      // 空メッセージ
-      msg.thread_ts !== undefined                 // スレッド返信は無視
+      (msg.thread_ts && msg.thread_ts !== msg.ts) // スレッド返信は無視（親メッセージだけ許可）
     ) {
       return;
     }
