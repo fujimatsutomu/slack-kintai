@@ -119,6 +119,11 @@ app.message(async ({ message, client }) => {
 // === 編集されたら警告コメントを送信 ===
 app.event('message', async ({ event, client }) => {
   if (event.subtype === 'message_changed') {
+    // Bot自身の投稿には反応しないようにする
+    if (event.message.bot_id) {
+      return;
+    }
+
     try {
       await client.chat.postMessage({
         channel: event.channel,
