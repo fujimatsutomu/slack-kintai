@@ -19,7 +19,7 @@ const weekdayToEmoji = [
   'niti'   // 日
 ];
 
-// 指定の月日から「今日に最も近い年」を自動で推定
+// 指定の月日から「今日に最も近い年」を推定
 function resolveDate(month, day) {
   const today = dayjs();
   const candidates = [
@@ -27,21 +27,9 @@ function resolveDate(month, day) {
     dayjs(`${today.year()}-${month}-${day}`, 'YYYY-M-D'),
     dayjs(`${today.year() + 1}-${month}-${day}`, 'YYYY-M-D'),
   ];
-
   return candidates
     .filter(date => date.isValid())
     .sort((a, b) => Math.abs(a.diff(today)) - Math.abs(b.diff(today)))[0];
-}
-
-// 安全にリアクション追加（already_reacted対策）
-async function safeAddReaction(client, channel, name, timestamp) {
-  try {
-    await client.reactions.add({ channel, name, timestamp });
-  } catch (error) {
-    if (error.data?.error !== 'already_reacted') {
-      console.error(`リアクション追加失敗 (${name}):`, error);
-    }
-  }
 }
 
 // === メッセージ投稿時の処理 ===
@@ -54,7 +42,11 @@ app.message(async ({ message, client }) => {
 
     // === フリートーク: OK検知で 👀 ===
     if (channelName === 'フリートーク' && message.text.includes('OK')) {
-      await safeAddReaction(client, message.channel, 'eyes', message.ts);
+      await client.reactions.add({
+        channel: message.channel,
+        name: 'eyes',
+        timestamp: message.ts
+      });
       return;
     }
 
@@ -73,30 +65,30 @@ app.message(async ({ message, client }) => {
         }
 
         const [_, month, day] = match;
-
         const date = resolveDate(month, day);
         if (!date.isValid()) {
           allValid = false;
           break;
         }
 
+        // 曜日スタンプ（日曜=0 → 月曜=0 に変換）
         const emojiIndex = (date.day() + 6) % 7;
         const emoji = weekdayToEmoji[emojiIndex];
 
-        // 曜日スタンプ
-        await safeAddReaction(client, message.channel, emoji, message.ts);
+        // 曜日スタンプ追加
+        await addReactionSafe(client, message.channel, emoji, message.ts);
 
         // 未来・過去スタンプ
         const today = dayjs();
         const directionEmoji = date.isBefore(today, 'day') ? 'rewind' : 'fast_forward';
-        await safeAddReaction(client, message.channel, directionEmoji, message.ts);
+        await addReactionSafe(client, message.channel, directionEmoji, message.ts);
       }
 
       // ✅ or ❌ リアクション
-      const resultEmoji = allValid ? 'white_check_mark' : 'x';
-      await safeAddReaction(client, message.channel, resultEmoji, message.ts);
+      const checkEmoji = allValid ? 'white_check_mark' : 'x';
+      await addReactionSafe(client, message.channel, checkEmoji, message.ts);
 
-      // ❌ の場合は注意メッセージ
+      // ❌ の場合は注意コメント
       if (!allValid) {
         await client.chat.postMessage({
           channel: message.channel,
@@ -106,17 +98,20 @@ app.message(async ({ message, client }) => {
       }
     }
   } catch (error) {
-    console.error('投稿処理エラー:', error);
+    console.error('メッセージ処理エラー:', error);
   }
 });
 
-// === 編集されたら警告コメントを送信 ===
+// === 編集されたら警告コメントを送信（削除後の編集には反応しない）===
 app.event('message', async ({ event, client }) => {
   if (event.subtype === 'message_changed') {
-    // Bot自身の投稿または過去のメッセージがBot投稿なら無視
+    const msg = event.message;
+
+    // 以下の条件を満たす場合はスキップ
     if (
-      event.message.bot_id ||
-      event.previous_message?.bot_id
+      msg.bot_id ||                               // Bot自身の投稿
+      event.previous_message?.bot_id ||           // 以前の投稿がBotのもの
+      !msg.text || msg.text.trim() === ''         // 削除で空になったメッセージ
     ) {
       return;
     }
@@ -124,7 +119,7 @@ app.event('message', async ({ event, client }) => {
     try {
       await client.chat.postMessage({
         channel: event.channel,
-        thread_ts: event.message.ts,
+        thread_ts: msg.ts,
         text: 'この申請は**無効**です。申請と本メッセージを**削除して再度申請**してください。'
       });
     } catch (error) {
@@ -132,6 +127,21 @@ app.event('message', async ({ event, client }) => {
     }
   }
 });
+
+// === 同じリアクションを2度押さないよう安全にリアクションを付ける ===
+async function addReactionSafe(client, channel, name, timestamp) {
+  try {
+    await client.reactions.add({
+      channel,
+      name,
+      timestamp
+    });
+  } catch (error) {
+    if (error.data?.error !== 'already_reacted') {
+      console.error(`リアクション失敗(${name}):`, error);
+    }
+  }
+}
 
 // サーバー起動
 (async () => {
