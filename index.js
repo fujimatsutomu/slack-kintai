@@ -98,7 +98,7 @@ app.event('message', async ({ event, client }) => {
       await client.chat.postMessage({
         channel: event.channel,
         thread_ts: event.message.ts,
-        text: 'この申請は**無効**です。メッセージを**削除して再度申請**してください。'
+        text: 'この申請は**無効**です。申請と本メッセージを**削除して再度申請**してください。'
       });
     } catch (error) {
       console.error(error);
